@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lunitium.DependencyInjection", "Lunitium.DependencyInjection\Lunitium.DependencyInjection.csproj", "{6658E600-7007-4260-85F2-1F8AB4C1660E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lunitium.DependencyInjection.Test", "Lunitium.DependencyInjection.Test\Lunitium.DependencyInjection.Test.csproj", "{F6B8992B-916B-4BF9-8A97-A0E32ECCC43E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6658E600-7007-4260-85F2-1F8AB4C1660E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6658E600-7007-4260-85F2-1F8AB4C1660E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6658E600-7007-4260-85F2-1F8AB4C1660E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6658E600-7007-4260-85F2-1F8AB4C1660E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6B8992B-916B-4BF9-8A97-A0E32ECCC43E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6B8992B-916B-4BF9-8A97-A0E32ECCC43E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6B8992B-916B-4BF9-8A97-A0E32ECCC43E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6B8992B-916B-4BF9-8A97-A0E32ECCC43E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
