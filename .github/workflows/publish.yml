@@ -70,7 +70,7 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -c Release
       - name: Pack NuGet package with specified version
-        run: dotnet pack --configuration Release -o nupkgs /p:PackageVersion=${{ github.event.inputs.package-version }}
+        run: dotnet pack --configuration Release -o nupkgs /p:PackageVersion=${{ github.event.inputs.version }}
       - name: Publish NuGet package to GitHub Packages
         run: dotnet nuget push nupkgs/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
         env:
