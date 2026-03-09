@@ -60,8 +60,6 @@ jobs:
       packages: write
     
     steps:
-      - name: Set VERSION environment variable
-        run: echo "VERSION=${{ github.event.inputs.package-version }}" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -72,7 +70,7 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -c Release
       - name: Pack NuGet package with specified version
-        run: dotnet pack --configuration Release -o nupkgs -p:PackageVersion=${{ env.VERSION }}
+        run: dotnet pack --configuration Release -o nupkgs /p:PackageVersion=${{ github.event.inputs.package-version }}
       - name: Publish NuGet package to GitHub Packages
         run: dotnet nuget push nupkgs/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
         env:
