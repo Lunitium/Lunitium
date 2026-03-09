@@ -1,0 +1,78 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Publish version
+        type: string
+        required: true
+        default: test
+
+jobs:
+  build:
+    name: Build
+    strategy:
+      matrix:
+        platform: [ ubuntu-latest, macos-latest, windows-latest ]
+        version: [ 10.x ]
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ matrix.version }}
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore /WarnAsError
+  
+  test:
+    name: Test
+    strategy:
+      matrix:
+        platform: [ ubuntu-latest, macos-latest, windows-latest ]
+        version: [ 10.x ]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ matrix.version }}
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Test
+        run: dotnet test --verbosity normal
+  
+  publish_github:
+    needs:
+      - build
+      - test
+    environment: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Set VERSION environment variable
+        run: echo "VERSION=${{ github.event.inputs.package-version }}" >> $GITHUB_ENV
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.x
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore -c Release
+      - name: Pack NuGet package with specified version
+        run: dotnet pack --configuration Release -o nupkgs /p:PackageVersion=${{ env.VERSION }}
+      - name: Publish NuGet package to GitHub Packages
+        run: dotnet nuget push nupkgs/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
