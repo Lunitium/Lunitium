@@ -7,7 +7,7 @@ on:
         description: Publish version
         type: string
         required: true
-        default: test
+        default: 1.0.0-alpha
 
 jobs:
   build:
