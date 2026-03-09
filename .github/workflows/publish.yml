@@ -70,10 +70,32 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -c Release
       - name: Pack NuGet package with specified version
-        run: dotnet pack --configuration Release -o nupkgs /p:PackageVersion=${{ github.event.inputs.version }}
+        run: dotnet pack -c Release -o nupkgs /p:PackageVersion=${{ github.event.inputs.version }}
       - name: Add Nuget Source
         run: dotnet nuget add source --store-password-in-clear-text "https://nuget.pkg.github.com/Lunitium/index.json" --username "Lunitium" --password "${{ secrets.GITHUB_TOKEN }}" --name "github"
       - name: Publish NuGet package to GitHub Packages
         run: dotnet nuget push nupkgs/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  publish_nuget:
+    name: Publish NuGet
+    needs: publish_github
+    environment: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.x
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore -c Release
+      - name: Pack NuGet package with specified version
+        run: dotnet pack -c Release -o nupkgs /p:PackageVersion=${{ github.event.inputs.version }}
+      - name: Publish NuGet package to NuGet Packages
+        run: dotnet nuget push nupkgs/*.nupkg --api-key ${{ secrets.NUGET_SECRET }}
