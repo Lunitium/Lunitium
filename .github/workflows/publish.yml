@@ -48,11 +48,28 @@ jobs:
       - name: Test
         run: dotnet test --verbosity normal
   
+  pack:
+    name: Pack NuGet Package
+    needs: [ build, test ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.x
+      - name: Pack
+        run: dotnet pack -c Release -o nupkgs /p:PackageVersion=${{ github.event.inputs.version }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg-files
+          path: nupkgs/*.nupkg
+          retention-days: 1
+  
   publish_github:
     name: Publish Github
-    needs:
-      - build
-      - test
+    needs: pack
     environment: publish
     runs-on: ubuntu-latest
     permissions:
@@ -60,17 +77,11 @@ jobs:
       packages: write
     
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
         with:
-          dotnet-version: 10.x
-      - name: Restore dependencies
-        run: dotnet restore
-      - name: Build
-        run: dotnet build --no-restore -c Release
-      - name: Pack NuGet package with specified version
-        run: dotnet pack -c Release -o nupkgs /p:PackageVersion=${{ github.event.inputs.version }}
+          name: nupkg-files
+          path: nupkgs
       - name: Add Nuget Source
         run: dotnet nuget add source --store-password-in-clear-text "https://nuget.pkg.github.com/Lunitium/index.json" --username "Lunitium" --password "${{ secrets.GITHUB_TOKEN }}" --name "github"
       - name: Publish NuGet package to GitHub Packages
@@ -78,7 +89,7 @@ jobs:
   
   publish_nuget:
     name: Publish NuGet
-    needs: publish_github
+    needs: pack
     environment: publish
     runs-on: ubuntu-latest
     permissions:
@@ -86,16 +97,33 @@ jobs:
       packages: write
       
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
         with:
-          dotnet-version: 10.x
-      - name: Restore dependencies
-        run: dotnet restore
-      - name: Build
-        run: dotnet build --no-restore -c Release
-      - name: Pack NuGet package with specified version
-        run: dotnet pack -c Release -o nupkgs /p:PackageVersion=${{ github.event.inputs.version }}
+          name: nupkg-files
+          path: nupkgs
       - name: Publish NuGet package to NuGet Packages
         run: dotnet nuget push nupkgs/*.nupkg --api-key ${{ secrets.NUGET_SECRET }}
+        
+  create_release:
+    name: Create Release
+    needs: 
+      - publish_github
+      - publish_nuget
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nupkg-files
+          path: artifacts
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: Release v${{ github.event.inputs.version }}
+          body: "Versão ${{ github.event.inputs.version }} publicada automaticamente."
+          files: artifacts/*.nupkg
+          prerelease: ${{ contains(github.event.inputs.version, '-') }}
