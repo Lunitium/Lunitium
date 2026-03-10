@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Text;
+using Lunitium.DependencyInjection.Analysis;
 using Lunitium.DependencyInjection.Attributes;
 using Lunitium.DependencyInjection.Enums;
 using Lunitium.DependencyInjection.Models;
@@ -77,27 +78,114 @@ public class DependencyGenerator : IIncrementalGenerator
 
     private static ServiceFactoryToRegister? ParseFactory(INamedTypeSymbol classSymbol, bool isKeyed)
     {
-        var factoryArg = classSymbol.GetMembers()
+        var factoryArgs = classSymbol.GetMembers()
             .OfType<IMethodSymbol>()
             .Where(x => x.GetAttributes()
-                .Any(a => a.AttributeClass?.Name is "DependencyFactoryAttribute"))
-            .FirstOrDefault(x => x.IsStatic && (
-                (!isKeyed && (
-                    x.Parameters.Length == 0 || (
-                        x.Parameters.Length == 1 &&
-                        x.Parameters[0].Type.ToDisplayString() ==
-                        "System.IServiceProvider")
-                )) ||
-                (isKeyed && x.Parameters.All(p =>
-                     p.Type.ToDisplayString() == "System.IServiceProvider" ||
-                     p.Type.SpecialType == SpecialType.System_Object) &&
-                 x.Parameters.Length is >= 0 and <= 2)
-            ));
+                .Any(a => a.AttributeClass?.Name is "DependencyFactoryAttribute")
+            ).ToList();
+        // .FirstOrDefault(x => x.IsStatic && (
+        //     (!isKeyed && (
+        //         x.Parameters.Length == 0 || (
+        //             x.Parameters.Length == 1 &&
+        //             x.Parameters[0].Type.ToDisplayString() ==
+        //             "System.IServiceProvider")
+        //     )) ||
+        //     (isKeyed && x.Parameters.All(p =>
+        //          p.Type.ToDisplayString() == "System.IServiceProvider" ||
+        //          p.Type.SpecialType == SpecialType.System_Object) &&
+        //      x.Parameters.Length is >= 0 and <= 2)
+        // ));
 
-        if (factoryArg is null)
+        if (!factoryArgs.Any())
             return null;
 
-        var parameterOrder = factoryArg.Parameters.Select(p =>
+        if (factoryArgs.Count > 1)
+        {
+            return new ServiceFactoryToRegister
+            {
+                Errors = factoryArgs.Select(x => Diagnostic.Create(
+                    AnalysisError.MoreThanOneFactory,
+                    x.Locations[0],
+                    classSymbol.Name
+                ))
+            };
+        }
+
+        var factoryMethod = factoryArgs[0];
+
+        if (factoryMethod is null)
+            return null;
+
+        var functionRefName = $"{classSymbol.Name}.{factoryMethod.Name}";
+        if (!factoryMethod.IsStatic)
+        {
+            return new ServiceFactoryToRegister
+            {
+                Errors =
+                [
+                    Diagnostic.Create(
+                        AnalysisError.NotStaticMethod,
+                        factoryMethod.Locations[0],
+                        functionRefName
+                    )
+                ]
+            };
+        }
+
+        var maxNumberOfParameters = isKeyed ? 2 : 1;
+        if (factoryMethod.Parameters.Length > maxNumberOfParameters)
+        {
+            return new ServiceFactoryToRegister
+            {
+                Errors =
+                [
+                    Diagnostic.Create(
+                        AnalysisError.ManyParameters,
+                        factoryMethod.Locations[0],
+                        functionRefName,
+                        maxNumberOfParameters
+                    )
+                ]
+            };
+        }
+
+        if (isKeyed)
+        {
+            var parameterSymbols = factoryMethod.Parameters.Where(p =>
+                p.Type.ToDisplayString() != "System.IServiceProvider" &&
+                p.Type.SpecialType != SpecialType.System_Object).ToList();
+
+            if (parameterSymbols.Any())
+            {
+                return new ServiceFactoryToRegister
+                {
+                    Errors = parameterSymbols.Select(p => Diagnostic.Create(
+                        AnalysisError.ParameterTypeNotAllowed,
+                        p.Locations[0],
+                        p.Type.Name
+                    ))
+                };
+            }
+        }
+        else
+        {
+            var parameterSymbols = factoryMethod.Parameters.Where(p =>
+                p.Type.ToDisplayString() != "System.IServiceProvider").ToList();
+
+            if (parameterSymbols.Any())
+            {
+                return new ServiceFactoryToRegister
+                {
+                    Errors = parameterSymbols.Select(p => Diagnostic.Create(
+                        AnalysisError.ParameterTypeNotAllowed,
+                        p.Locations[0],
+                        p.Type.Name
+                    ))
+                };
+            }
+        }
+
+        var parameterOrder = factoryMethod.Parameters.Select(p =>
         {
             if (p.Type.ToDisplayString() == "System.IServiceProvider")
             {
@@ -112,18 +200,19 @@ public class DependencyGenerator : IIncrementalGenerator
         return new ServiceFactoryToRegister
         {
             Parameters = parameterOrder,
-            FactoryName = factoryArg.Name
+            FactoryName = factoryMethod.Name
         };
     }
 
     private static void Generate(SourceProductionContext context, ImmutableArray<ServiceToRegister?> services)
     {
-        var result = GenerateExtensionClass(services);
+        var result = GenerateExtensionClass(context, services);
 
         context.AddSource("DependencyInjection.g.cs", SourceText.From(result, Encoding.UTF8));
     }
 
-    private static string GenerateExtensionClass(ImmutableArray<ServiceToRegister?> services)
+    private static string GenerateExtensionClass(SourceProductionContext context,
+        ImmutableArray<ServiceToRegister?> services)
     {
         var sb = new StringBuilder(2048);
 
@@ -140,6 +229,16 @@ public class DependencyGenerator : IIncrementalGenerator
 
         foreach (var service in Enumerable.OfType<ServiceToRegister>(services))
         {
+            if (service.Factory?.Errors.Any() ?? false)
+            {
+                foreach (var factoryError in service.Factory.Errors)
+                {
+                    context.ReportDiagnostic(factoryError);
+                }
+
+                continue;
+            }
+
             var factoryName = service.Factory is null
                 ? null
                 : $"sp => {service.Name}.{service.Factory.FactoryName}({ParseParameters(service.Factory.Parameters)})";

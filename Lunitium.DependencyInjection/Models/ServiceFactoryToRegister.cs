@@ -1,4 +1,5 @@
 using Lunitium.DependencyInjection.Enums;
+using Microsoft.CodeAnalysis;
 
 namespace Lunitium.DependencyInjection.Models;
 
@@ -13,4 +14,6 @@ internal class ServiceFactoryToRegister
     /// Parameter from factory function
     /// </summary>
     public IEnumerable<FactoryParameter> Parameters { get; set; } = [];
+
+    public IEnumerable<Diagnostic> Errors { get; set; } = [];
 }

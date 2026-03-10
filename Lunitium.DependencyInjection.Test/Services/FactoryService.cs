@@ -8,6 +8,7 @@ namespace Lunitium.DependencyInjection.Test.Services;
 [Dependency<IFactoryService>(LifeTime.Singleton, Key = "test")]
 public class FactoryService(ITransientService service, object? key) : IFactoryService
 {
+    public ITransientService Service { get; } = service;
     public object? Key { get; } = key;
 
     [DependencyFactory]
