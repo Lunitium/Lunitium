@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Text;
 using Lunitium.DependencyInjection.Attributes;
 using Lunitium.DependencyInjection.Enums;
+using Lunitium.DependencyInjection.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -34,7 +35,7 @@ public class DependencyGenerator : IIncrementalGenerator
     {
         var node = (ClassDeclarationSyntax)context.Node;
 
-        if (context.SemanticModel.GetDeclaredSymbol(node, cancellationToken) is not INamedTypeSymbol classSymbol)
+        if (context.SemanticModel.GetDeclaredSymbol(node, cancellationToken) is not { } classSymbol)
             return null;
 
         foreach (var attributeData in classSymbol.GetAttributes())
@@ -59,16 +60,60 @@ public class DependencyGenerator : IIncrementalGenerator
                 key = keyArg.Value.ToCSharpString();
             }
 
+            var serviceFactoryToRegister = ParseFactory(classSymbol, !string.IsNullOrWhiteSpace(key));
+
             return new ServiceToRegister
             {
                 Name = selfClass,
                 LifeTime = lifeTimeValue is null ? LifeTime.Scoped : (LifeTime)lifeTimeValue,
                 InterfaceName = interfaceType?.ToDisplayString(),
-                KeyLiteral = key
+                KeyLiteral = key,
+                Factory = serviceFactoryToRegister,
             };
         }
 
         return null;
+    }
+
+    private static ServiceFactoryToRegister? ParseFactory(INamedTypeSymbol classSymbol, bool isKeyed)
+    {
+        var factoryArg = classSymbol.GetMembers()
+            .OfType<IMethodSymbol>()
+            .Where(x => x.GetAttributes()
+                .Any(a => a.AttributeClass?.Name is "DependencyFactoryAttribute"))
+            .FirstOrDefault(x => x.IsStatic && (
+                (!isKeyed && (
+                    x.Parameters.Length == 0 || (
+                        x.Parameters.Length == 1 &&
+                        x.Parameters[0].Type.ToDisplayString() ==
+                        "System.IServiceProvider")
+                )) ||
+                (isKeyed && x.Parameters.All(p =>
+                     p.Type.ToDisplayString() == "System.IServiceProvider" ||
+                     p.Type.SpecialType == SpecialType.System_Object) &&
+                 x.Parameters.Length is >= 0 and <= 2)
+            ));
+
+        if (factoryArg is null)
+            return null;
+
+        var parameterOrder = factoryArg.Parameters.Select(p =>
+        {
+            if (p.Type.ToDisplayString() == "System.IServiceProvider")
+            {
+                return FactoryParameter.Service;
+            }
+
+            return p.Type.SpecialType == SpecialType.System_Object
+                ? FactoryParameter.Key
+                : throw new InvalidOperationException("Parâmetro de factory inválido.");
+        }).ToArray();
+
+        return new ServiceFactoryToRegister
+        {
+            Parameters = parameterOrder,
+            FactoryName = factoryArg.Name
+        };
     }
 
     private static void Generate(SourceProductionContext context, ImmutableArray<ServiceToRegister?> services)
@@ -95,17 +140,25 @@ public class DependencyGenerator : IIncrementalGenerator
 
         foreach (var service in Enumerable.OfType<ServiceToRegister>(services))
         {
+            var factoryName = service.Factory is null
+                ? null
+                : $"sp => {service.Name}.{service.Factory.FactoryName}({ParseParameters(service.Factory.Parameters)})";
+
             if (string.IsNullOrWhiteSpace(service.KeyLiteral))
             {
                 sb.AppendLine(!string.IsNullOrEmpty(service.InterfaceName)
-                    ? $"        services.Add{service.LifeTime.ToString()}<{service.InterfaceName}, {service.Name}>();"
-                    : $"        services.Add{service.LifeTime.ToString()}<{service.Name}>();");
+                    ? $"        services.Add{service.LifeTime.ToString()}<{service.InterfaceName}, {service.Name}>({factoryName});"
+                    : $"        services.Add{service.LifeTime.ToString()}<{service.Name}>({factoryName});");
                 continue;
             }
-            
+
+            var parameters = service.Factory is null
+                ? service.KeyLiteral
+                : $"{service.KeyLiteral}, (sp, k) => {service.Name}.{service.Factory.FactoryName}({ParseParameters(service.Factory.Parameters)})";
+
             sb.AppendLine(!string.IsNullOrEmpty(service.InterfaceName)
-                ? $"        services.AddKeyed{service.LifeTime.ToString()}<{service.InterfaceName}, {service.Name}>({service.KeyLiteral});"
-                : $"        services.AddKeyed{service.LifeTime.ToString()}<{service.Name}>({service.KeyLiteral});");
+                ? $"        services.AddKeyed{service.LifeTime.ToString()}<{service.InterfaceName}, {service.Name}>({parameters});"
+                : $"        services.AddKeyed{service.LifeTime.ToString()}<{service.Name}>({parameters});");
         }
 
         sb.AppendLine("        return services;");
@@ -113,5 +166,15 @@ public class DependencyGenerator : IIncrementalGenerator
         sb.AppendLine("}");
 
         return sb.ToString();
+    }
+
+    private static string ParseParameters(IEnumerable<FactoryParameter> parameters)
+    {
+        return string.Join(", ", parameters.Select(p => p switch
+        {
+            FactoryParameter.Service => "sp",
+            FactoryParameter.Key => "k",
+            _ => throw new ArgumentOutOfRangeException(nameof(p), p, null)
+        }));
     }
 }

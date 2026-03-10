@@ -1,6 +1,6 @@
 using Lunitium.DependencyInjection.Enums;
 
-namespace Lunitium.DependencyInjection;
+namespace Lunitium.DependencyInjection.Models;
 
 /// <summary>
 /// Service info
@@ -26,4 +26,11 @@ internal class ServiceToRegister
     /// Keyed service name
     /// </summary>
     public string? KeyLiteral { get; set; }
+
+    /// <summary>
+    /// Factory data
+    /// </summary>
+    public ServiceFactoryToRegister? Factory { get; set; }
+    
+    
 }
