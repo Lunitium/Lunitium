@@ -11,6 +11,7 @@ Lunitium is an ecosystem of libraries designed to refine the developer experienc
   - Generate function to register all services
   - All lifetime supported
   - Keyed supported
+  - Factory supported
 
 [!NOTE]
 Lunitium is currently in active development. While we are "not yet" a massive collection, we are building a solid foundation for a more productive future.
