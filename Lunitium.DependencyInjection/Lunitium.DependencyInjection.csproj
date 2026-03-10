@@ -6,12 +6,12 @@
         <Nullable>enable</Nullable>
         <LangVersion>latest</LangVersion>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-        <PackageLogo>lunitium_logo.png</PackageLogo>
+        <PackageIcon>lunitium_logo.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="../lunitium_logo.png" Pack="true" PackagePath=""/>
+        <None Include="../lunitium_logo.png" Pack="true" Visible="false" PackagePath=""/>
         <None Include="../README.md" Pack="true" PackagePath=""/>
     </ItemGroup>
 

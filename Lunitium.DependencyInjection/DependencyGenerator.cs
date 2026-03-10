@@ -1,7 +1,9 @@
 using System.Collections.Immutable;
 using System.Text;
+using Lunitium.DependencyInjection.Attributes;
 using Lunitium.DependencyInjection.Enums;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
@@ -19,7 +21,7 @@ public class DependencyGenerator : IIncrementalGenerator
             )
             .Where(static service => service is not null)
             .Collect();
-        
+
         context.RegisterSourceOutput(valueProvider, Generate);
     }
 
@@ -31,17 +33,17 @@ public class DependencyGenerator : IIncrementalGenerator
     private static ServiceToRegister? ParseData(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
         var node = (ClassDeclarationSyntax)context.Node;
-        
+
         if (context.SemanticModel.GetDeclaredSymbol(node, cancellationToken) is not INamedTypeSymbol classSymbol)
             return null;
-        
+
         foreach (var attributeData in classSymbol.GetAttributes())
         {
             if (attributeData.AttributeClass?.Name != "DependencyAttribute")
                 continue;
 
             ITypeSymbol? interfaceType = null;
-            
+
             if (attributeData.AttributeClass.IsGenericType)
             {
                 interfaceType = attributeData.AttributeClass.TypeArguments.FirstOrDefault();
@@ -50,24 +52,32 @@ public class DependencyGenerator : IIncrementalGenerator
             var selfClass = classSymbol.ToDisplayString();
             var lifeTimeValue = (int?)attributeData.ConstructorArguments.FirstOrDefault().Value;
 
-            return new ServiceToRegister()
+            string? key = null;
+            var keyArg = attributeData.NamedArguments.FirstOrDefault(x => x.Key == nameof(DependencyAttribute.Key));
+            if (!keyArg.Value.IsNull)
+            {
+                key = keyArg.Value.ToCSharpString();
+            }
+
+            return new ServiceToRegister
             {
                 Name = selfClass,
                 LifeTime = lifeTimeValue is null ? LifeTime.Scoped : (LifeTime)lifeTimeValue,
-                InterfaceName = interfaceType?.ToDisplayString()
+                InterfaceName = interfaceType?.ToDisplayString(),
+                KeyLiteral = key
             };
         }
-        
+
         return null;
     }
 
     private static void Generate(SourceProductionContext context, ImmutableArray<ServiceToRegister?> services)
     {
         var result = GenerateExtensionClass(services);
-        
+
         context.AddSource("DependencyInjection.g.cs", SourceText.From(result, Encoding.UTF8));
     }
-    
+
     private static string GenerateExtensionClass(ImmutableArray<ServiceToRegister?> services)
     {
         var sb = new StringBuilder(2048);
@@ -83,20 +93,19 @@ public class DependencyGenerator : IIncrementalGenerator
         sb.AppendLine("    public static IServiceCollection AddLunitiumDependencies(this IServiceCollection services)");
         sb.AppendLine("    {");
 
-        foreach (var service in services)
+        foreach (var service in Enumerable.OfType<ServiceToRegister>(services))
         {
-            if (service == null) continue;
-
-            var method = service.LifeTime switch
+            if (string.IsNullOrWhiteSpace(service.KeyLiteral))
             {
-                LifeTime.Singleton => "AddSingleton",
-                LifeTime.Transient => "AddTransient",
-                _ => "AddScoped"
-            };
-
+                sb.AppendLine(!string.IsNullOrEmpty(service.InterfaceName)
+                    ? $"        services.Add{service.LifeTime.ToString()}<{service.InterfaceName}, {service.Name}>();"
+                    : $"        services.Add{service.LifeTime.ToString()}<{service.Name}>();");
+                continue;
+            }
+            
             sb.AppendLine(!string.IsNullOrEmpty(service.InterfaceName)
-                ? $"        services.{method}<{service.InterfaceName}, {service.Name}>();"
-                : $"        services.{method}<{service.Name}>();");
+                ? $"        services.AddKeyed{service.LifeTime.ToString()}<{service.InterfaceName}, {service.Name}>({service.KeyLiteral});"
+                : $"        services.AddKeyed{service.LifeTime.ToString()}<{service.Name}>({service.KeyLiteral});");
         }
 
         sb.AppendLine("        return services;");

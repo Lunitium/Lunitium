@@ -34,5 +34,10 @@ public class DependencyAttribute(LifeTime lifeTime = LifeTime.Scoped) : Attribut
     /// <summary>
     /// Interface type reference
     /// </summary>
-    public Type? Type { get; set; }
+    public Type? Type { get; protected set; }
+
+    /// <summary>
+    /// Keyed service name
+    /// </summary>
+    public object? Key { get; set; }
 }

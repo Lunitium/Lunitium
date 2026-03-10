@@ -21,4 +21,9 @@ internal class ServiceToRegister
     /// Reference interface full name
     /// </summary>
     public string? InterfaceName { get; set; }
+
+    /// <summary>
+    /// Keyed service name
+    /// </summary>
+    public string? KeyLiteral { get; set; }
 }
