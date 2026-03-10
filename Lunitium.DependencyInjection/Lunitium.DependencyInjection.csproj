@@ -8,6 +8,7 @@
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <PackageIcon>lunitium_logo.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Description>A fluent and lightweight approach to managing service lifecycles without the usual ceremony.</Description>
     </PropertyGroup>
 
     <ItemGroup>
