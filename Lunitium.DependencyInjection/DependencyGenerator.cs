@@ -83,18 +83,6 @@ public class DependencyGenerator : IIncrementalGenerator
             .Where(x => x.GetAttributes()
                 .Any(a => a.AttributeClass?.Name is "DependencyFactoryAttribute")
             ).ToList();
-        // .FirstOrDefault(x => x.IsStatic && (
-        //     (!isKeyed && (
-        //         x.Parameters.Length == 0 || (
-        //             x.Parameters.Length == 1 &&
-        //             x.Parameters[0].Type.ToDisplayString() ==
-        //             "System.IServiceProvider")
-        //     )) ||
-        //     (isKeyed && x.Parameters.All(p =>
-        //          p.Type.ToDisplayString() == "System.IServiceProvider" ||
-        //          p.Type.SpecialType == SpecialType.System_Object) &&
-        //      x.Parameters.Length is >= 0 and <= 2)
-        // ));
 
         if (!factoryArgs.Any())
             return null;
