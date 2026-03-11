@@ -5,8 +5,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <LangVersion>14</LangVersion>
-        <IncludeBuildOutput>false</IncludeBuildOutput>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        
         <PackageIcon>lunitium_logo.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseFile>LICENSE</PackageLicenseFile>
@@ -29,13 +29,17 @@
     </ItemGroup>
 
     <ItemGroup>
-      <AdditionalFiles Include="Analysis\AnalyzerReleases.Shipped.md">
-        <Visible>false</Visible>
-      </AdditionalFiles>
+        <AdditionalFiles Include="Analysis\AnalyzerReleases.Shipped.md"
+                         Pack="true"
+                         PackagePath="analyzers/dotnet/cs"
+                         Visible="false" />
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+        <None Include="$(OutputPath)\$(AssemblyName).dll" 
+              Pack="true" 
+              PackagePath="analyzers/dotnet/cs" 
+              Visible="false" />
     </ItemGroup>
 
 </Project>
