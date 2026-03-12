@@ -13,6 +13,10 @@ Lunitium is an ecosystem of libraries designed to refine the developer experienc
   - Keyed supported
   - Factory supported
 
+```shell
+dotnet add package Lunitium.DependencyInjection
+```
+
 ```cs
 [Dependency]
 public class Service
