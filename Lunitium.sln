@@ -6,7 +6,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lunitium.DependencyInjectio
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{9123DB71-7805-4859-92DF-5EBFDEC514D6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspExample", "Examples\AspExample\AspExample.csproj", "{BBA2E700-E3A3-4085-9205-3B017F652EA6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyInjectionExample", "Examples\DependencyInjectionExample\DependencyInjectionExample.csproj", "{BBA2E700-E3A3-4085-9205-3B017F652EA6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pipes", "Pipes", "{4118E884-29C9-4C5F-B384-817537274F51}"
 	ProjectSection(SolutionItems) = preProject

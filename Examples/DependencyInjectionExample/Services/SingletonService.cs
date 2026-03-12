@@ -1,7 +1,7 @@
 using Lunitium.DependencyInjection.Attributes;
 using Lunitium.DependencyInjection.Enums;
 
-namespace AspExample.Services;
+namespace DependencyInjectionExample.Services;
 
 [Dependency(LifeTime.Singleton)]
 public class SingletonService

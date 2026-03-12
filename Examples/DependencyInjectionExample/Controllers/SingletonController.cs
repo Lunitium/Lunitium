@@ -1,7 +1,7 @@
-using AspExample.Services;
+using DependencyInjectionExample.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AspExample.Controllers;
+namespace DependencyInjectionExample.Controllers;
 
 [ApiController]
 [Route("singleton")]
