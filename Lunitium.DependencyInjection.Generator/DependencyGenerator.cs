@@ -1,76 +1,86 @@
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Text;
-using Lunitium.DependencyInjection.Analysis;
-using Lunitium.DependencyInjection.Attributes;
-using Lunitium.DependencyInjection.Enums;
-using Lunitium.DependencyInjection.Models;
-using Lunitium.Shared;
+using Lunitium.DependencyInjection.Generator.Analysis;
+using Lunitium.DependencyInjection.Generator.Enums;
+using Lunitium.DependencyInjection.Generator.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
-namespace Lunitium.DependencyInjection;
+namespace Lunitium.DependencyInjection.Generator;
 
 [Generator]
 public class DependencyGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var valueProvider = context.SyntaxProvider
-            .CreateSyntaxProvider(
-                predicate: GeneratorFilter.FilterClassAttribute(nameof(DependencyAttribute)),
-                transform: ParseData
+        var servicesNotGeneric = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                "Lunitium.DependencyInjection.Attributes.DependencyAttribute",
+                predicate: (node, _) => node is ClassDeclarationSyntax,
+                transform: (generator, _) => ParseData(generator, false)
+            )
+            .Where(static service => service is not null)
+            .Collect();
+        var servicesGeneric = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                "Lunitium.DependencyInjection.Attributes.DependencyAttribute`1",
+                predicate: (node, _) => node is ClassDeclarationSyntax,
+                transform: (generator, _) => ParseData(generator, true)
             )
             .Where(static service => service is not null)
             .Collect();
 
-        context.RegisterSourceOutput(valueProvider, Generate);
+        var allServices = servicesNotGeneric
+            .Combine(servicesGeneric)
+            .Select(static (combined, _) =>
+            {
+                var (notGeneric, generic) = combined;
+                
+                var builder = notGeneric.ToBuilder();
+                builder.AddRange(generic);
+
+                return builder.ToImmutable();
+            });
+        
+        context.RegisterSourceOutput(allServices, Generate);
     }
 
-    private static ServiceToRegister? ParseData(GeneratorSyntaxContext context, CancellationToken cancellationToken)
+    private static ServiceToRegister ParseData(GeneratorAttributeSyntaxContext context, bool isGeneric)
     {
-        var node = (ClassDeclarationSyntax)context.Node;
+        var classSymbol = (INamedTypeSymbol)context.TargetSymbol;
 
-        if (context.SemanticModel.GetDeclaredSymbol(node, cancellationToken) is not { } classSymbol)
-            return null;
+        var attributeName = isGeneric ? "DependencyAttribute`1" : "DependencyAttribute";
+        var attributeData = classSymbol.GetAttributes().First(a => a.AttributeClass?.MetadataName == attributeName);
 
-        foreach (var attributeData in classSymbol.GetAttributes())
+        ITypeSymbol? interfaceType = null;
+
+        if (isGeneric && attributeData.AttributeClass is not null && attributeData.AttributeClass.IsGenericType)
         {
-            if (attributeData.AttributeClass?.Name != "DependencyAttribute")
-                continue;
-
-            ITypeSymbol? interfaceType = null;
-
-            if (attributeData.AttributeClass.IsGenericType)
-            {
-                interfaceType = attributeData.AttributeClass.TypeArguments.FirstOrDefault();
-            }
-
-            var selfClass = classSymbol.ToDisplayString();
-            var lifeTimeValue = (int?)attributeData.ConstructorArguments.FirstOrDefault().Value;
-
-            string? key = null;
-            var keyArg = attributeData.NamedArguments.FirstOrDefault(x => x.Key == nameof(DependencyAttribute.Key));
-            if (!keyArg.Value.IsNull)
-            {
-                key = keyArg.Value.ToCSharpString();
-            }
-
-            var serviceFactoryToRegister = ParseFactory(classSymbol, !string.IsNullOrWhiteSpace(key));
-
-            return new ServiceToRegister
-            {
-                Name = selfClass,
-                LifeTime = lifeTimeValue is null ? LifeTime.Scoped : (LifeTime)lifeTimeValue,
-                InterfaceName = interfaceType?.ToDisplayString(),
-                KeyLiteral = key,
-                Factory = serviceFactoryToRegister,
-            };
+            interfaceType = attributeData.AttributeClass.TypeArguments.FirstOrDefault();
         }
 
-        return null;
+        var selfClass = classSymbol.ToDisplayString();
+        var lifeTimeValue = (int?)attributeData.ConstructorArguments.FirstOrDefault().Value;
+
+        string? key = null;
+        var keyArg = attributeData.NamedArguments.FirstOrDefault(x => x.Key == "Key");
+        if (!keyArg.Value.IsNull)
+        {
+            key = keyArg.Value.ToCSharpString();
+        }
+
+        var serviceFactoryToRegister = ParseFactory(classSymbol, !string.IsNullOrWhiteSpace(key));
+
+        return new ServiceToRegister
+        {
+            Name = selfClass,
+            LifeTime = lifeTimeValue is null ? LifeTime.Scoped : (LifeTime)lifeTimeValue,
+            InterfaceName = interfaceType?.ToDisplayString(),
+            KeyLiteral = key,
+            Factory = serviceFactoryToRegister,
+        };
     }
 
     private static ServiceFactoryToRegister? ParseFactory(INamedTypeSymbol classSymbol, bool isKeyed)
@@ -189,7 +199,7 @@ public class DependencyGenerator : IIncrementalGenerator
         };
     }
 
-    private static void Generate(SourceProductionContext context, ImmutableArray<ServiceToRegister?> services)
+    private static void Generate(SourceProductionContext context, ImmutableArray<ServiceToRegister> services)
     {
         var result = GenerateExtensionClass(context, services);
 
@@ -197,7 +207,7 @@ public class DependencyGenerator : IIncrementalGenerator
     }
 
     private static string GenerateExtensionClass(SourceProductionContext context,
-        ImmutableArray<ServiceToRegister?> services)
+        ImmutableArray<ServiceToRegister> services)
     {
         var sb = new StringBuilder(2048);
 
@@ -212,7 +222,7 @@ public class DependencyGenerator : IIncrementalGenerator
         sb.AppendLine("    public static IServiceCollection AddLunitiumDependencies(this IServiceCollection services)");
         sb.AppendLine("    {");
 
-        foreach (var service in Enumerable.OfType<ServiceToRegister>(services))
+        foreach (var service in services)
         {
             if (service.Factory?.Errors.Any() ?? false)
             {

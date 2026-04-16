@@ -20,9 +20,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Lunitium.DependencyInjection\Lunitium.DependencyInjection.csproj" 
-                        OutputItemType="Analyzer" 
+      <ProjectReference Include="..\Lunitium.DependencyInjection.Generator\Lunitium.DependencyInjection.Generator.csproj"
+                        OutputItemType="Analyzer"
                         ReferenceOutputAssembly="true" />
+      <ProjectReference Include="..\Lunitium.DependencyInjection\Lunitium.DependencyInjection.csproj" />
     </ItemGroup>
 
 </Project>

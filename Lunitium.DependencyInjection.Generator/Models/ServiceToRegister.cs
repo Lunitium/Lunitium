@@ -1,6 +1,6 @@
-using Lunitium.DependencyInjection.Enums;
+using Lunitium.DependencyInjection.Generator.Enums;
 
-namespace Lunitium.DependencyInjection.Models;
+namespace Lunitium.DependencyInjection.Generator.Models;
 
 /// <summary>
 /// Service info
@@ -11,12 +11,12 @@ internal class ServiceToRegister
     /// Service full name
     /// </summary>
     public string Name { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Lifetime of service
     /// </summary>
     public LifeTime LifeTime { get; set; }
-    
+
     /// <summary>
     /// Reference interface full name
     /// </summary>
@@ -31,6 +31,4 @@ internal class ServiceToRegister
     /// Factory data
     /// </summary>
     public ServiceFactoryToRegister? Factory { get; set; }
-    
-    
 }

@@ -1,7 +1,8 @@
-using Lunitium.DependencyInjection.Enums;
+using System.Collections.Generic;
+using Lunitium.DependencyInjection.Generator.Enums;
 using Microsoft.CodeAnalysis;
 
-namespace Lunitium.DependencyInjection.Models;
+namespace Lunitium.DependencyInjection.Generator.Models;
 
 internal class ServiceFactoryToRegister
 {
@@ -9,7 +10,7 @@ internal class ServiceFactoryToRegister
     /// Service factory method name
     /// </summary>
     public string? FactoryName { get; set; }
-    
+        
     /// <summary>
     /// Parameter from factory function
     /// </summary>

@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace Lunitium.DependencyInjection.Analysis;
+namespace Lunitium.DependencyInjection.Generator.Analysis;
 
 public static class AnalysisError
 {
