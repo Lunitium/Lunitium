@@ -6,7 +6,7 @@ namespace Lunitium.DependencyInjection.Test;
 public class FactoryServiceTest
 {
     private readonly IServiceProvider _serviceProvider;
-    
+
     public FactoryServiceTest()
     {
         var builder = new ServiceCollection();
@@ -18,7 +18,7 @@ public class FactoryServiceTest
     public void FactoryServiceExists()
     {
         var service = _serviceProvider.GetKeyedService<IFactoryService>("test");
-        
+
         Assert.NotNull(service);
         Assert.Equal(service.Key, "test");
     }

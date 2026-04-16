@@ -1,9 +1,11 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Text;
 using Lunitium.DependencyInjection.Analysis;
 using Lunitium.DependencyInjection.Attributes;
 using Lunitium.DependencyInjection.Enums;
 using Lunitium.DependencyInjection.Models;
+using Lunitium.Shared;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -18,18 +20,13 @@ public class DependencyGenerator : IIncrementalGenerator
     {
         var valueProvider = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: Filter,
+                predicate: GeneratorFilter.FilterClassAttribute(nameof(DependencyAttribute)),
                 transform: ParseData
             )
             .Where(static service => service is not null)
             .Collect();
 
         context.RegisterSourceOutput(valueProvider, Generate);
-    }
-
-    private static bool Filter(SyntaxNode node, CancellationToken cancellationToken)
-    {
-        return node is ClassDeclarationSyntax { AttributeLists.Count: > 0 };
     }
 
     private static ServiceToRegister? ParseData(GeneratorSyntaxContext context, CancellationToken cancellationToken)
