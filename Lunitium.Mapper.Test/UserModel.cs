@@ -1,9 +1,10 @@
 using Lunitium.Mapper.Attributes;
+using Lunitium.Mapper.Enums;
 using Lunitium.Mapper.Test.Dto;
 
 namespace Lunitium.Mapper.Test;
 
-[Mapping<UserDto>]
+[Mapping<UserDto>(Direction = MapDirection.ToDto)]
 public partial class UserModel
 {
     public uint Id { get; set; }

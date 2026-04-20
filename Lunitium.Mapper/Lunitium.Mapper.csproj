@@ -16,30 +16,20 @@
 
     <ItemGroup>
         <None Include="../lunitium_logo.png" Pack="true" Visible="false" PackagePath=""/>
-        <None Include="../README.md" Pack="true" PackagePath=""/>
+        <None Include="README.md" Pack="true" PackagePath=""/>
         <None Include="../LICENSE" Pack="true" PackagePath=""/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0-2.final">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <AdditionalFiles Include="Analysis\AnalyzerReleases.Shipped.md"
-                         Pack="true"
-                         PackagePath="analyzers/dotnet/cs"
-                         Visible="false" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Include="$(OutputPath)\$(AssemblyName).dll"
+        <None Include="$(OutputPath)\Lunitium.Mapper.Generator.dll"
               Pack="true"
               PackagePath="analyzers/dotnet/cs"
               Visible="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Lunitium.Mapper.Generator\Lunitium.Mapper.Generator.csproj"
+                        ReferenceOutputAssembly="true" />
     </ItemGroup>
     
 </Project>

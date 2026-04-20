@@ -90,7 +90,7 @@ jobs:
       - name: Add Nuget Source
         run: dotnet nuget add source --store-password-in-clear-text "https://nuget.pkg.github.com/Lunitium/index.json" --username "Lunitium" --password "${{ secrets.GITHUB_TOKEN }}" --name "github"
       - name: Publish NuGet package to GitHub Packages
-        run: dotnet nuget push nupkgs/${{ github.event.inputs.project }}.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
+        run: dotnet nuget push nupkgs/${{ github.event.inputs.project }}*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
   
   publish_nuget:
     name: Publish NuGet
@@ -108,7 +108,7 @@ jobs:
           name: nupkg-files
           path: nupkgs
       - name: Publish NuGet package to NuGet Packages
-        run: dotnet nuget push nupkgs/${{ github.event.inputs.project }}.nupkg --api-key ${{ secrets.NUGET_SECRET }} --source "nuget.org"
+        run: dotnet nuget push nupkgs/${{ github.event.inputs.project }}*.nupkg --api-key ${{ secrets.NUGET_SECRET }} --source "nuget.org"
   
   create_release:
     name: Create Release
