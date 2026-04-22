@@ -26,27 +26,35 @@ public class MapperGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(valueProvider, Generate);
     }
 
-    private static MapperToRegister ParseData(GeneratorAttributeSyntaxContext context,
+    private static MapperInfos ParseData(GeneratorAttributeSyntaxContext context,
         CancellationToken cancellationToken)
     {
         var classSymbol = (INamedTypeSymbol)context.TargetSymbol;
-        var attributeData = classSymbol.GetAttributes()
-            .First(a => a.AttributeClass?.MetadataName == "MappingAttribute`1");
-        var mapDirectionValue = (int?)attributeData.ConstructorArguments.FirstOrDefault().Value;
-        var dtoSymbol = (INamedTypeSymbol)attributeData.AttributeClass!.TypeArguments.First();
 
-        var modelProps = GetProps(classSymbol);
-        var dtoProps = GetProps(dtoSymbol);
-        var props = MapperProperty.Mapping(context, modelProps, dtoProps);
-
-        return new MapperToRegister
+        return new MapperInfos
         {
             Namespace = classSymbol.ContainingNamespace.ToDisplayString(),
-            AttributeSymbol = attributeData.ApplicationSyntaxReference!.GetSyntax(),
-            ModelSymbol = classSymbol,
-            DtoSymbol = dtoSymbol,
-            MapDirection = mapDirectionValue is null ? MapDirection.All : (MapDirection)mapDirectionValue,
-            Props = props
+            ModelName = classSymbol.Name,
+            Infos = classSymbol.GetAttributes()
+                .Where(x => x.AttributeClass?.MetadataName == "MappingAttribute`1")
+                .Select(attributeData =>
+                {
+                    var mapDirectionValue = (int?)attributeData.ConstructorArguments.FirstOrDefault().Value;
+                    var dtoSymbol = (INamedTypeSymbol)attributeData.AttributeClass!.TypeArguments.First();
+
+                    var modelProps = GetProps(classSymbol);
+                    var dtoProps = GetProps(dtoSymbol);
+                    var props = MapperProperty.Mapping(context, modelProps, dtoProps);
+
+                    return new MapperInfo()
+                    {
+                        AttributeSymbol = attributeData.ApplicationSyntaxReference!.GetSyntax(),
+                        ModelSymbol = classSymbol,
+                        DtoSymbol = dtoSymbol,
+                        MapDirection = mapDirectionValue is null ? MapDirection.All : (MapDirection)mapDirectionValue,
+                        Props = props
+                    };
+                }).ToList()
         };
     }
 
@@ -61,13 +69,13 @@ public class MapperGenerator : IIncrementalGenerator
             .ToList();
     }
 
-    private static void Generate(SourceProductionContext context, ImmutableArray<MapperToRegister> mappers)
+    private static void Generate(SourceProductionContext context, ImmutableArray<MapperInfos> mappers)
     {
         foreach (var mapperToRegister in mappers)
         {
-            var template = new MapperDtoRecordTemplate(context, mapperToRegister);
+            var template = new MapperTemplate(context, mapperToRegister);
             var result = template.Render();
-            context.AddSource($"{mapperToRegister.Namespace}.{mapperToRegister.ModelSymbol.Name}.cs",
+            context.AddSource($"{mapperToRegister.Namespace}.{mapperToRegister.ModelName}.cs",
                 SourceText.From(result, Encoding.UTF8)
             );
         }

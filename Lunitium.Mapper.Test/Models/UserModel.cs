@@ -4,7 +4,8 @@ using Lunitium.Mapper.Test.Dto;
 
 namespace Lunitium.Mapper.Test.Models;
 
-[Mapping<UserDto>(Direction = MapDirection.ToDto)]
+[Mapping<UserRecordDto>(Direction = MapDirection.To)]
+[Mapping<UserClassDto>(Direction = MapDirection.To)]
 public partial class UserModel
 {
     public uint Id { get; set; }

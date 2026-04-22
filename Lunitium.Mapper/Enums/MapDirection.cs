@@ -3,8 +3,8 @@ namespace Lunitium.Mapper.Enums;
 [Flags]
 public enum MapDirection : byte
 {
-    ToDto = 1 << 0,
-    FromDto = 1 << 1,
+    To = 1 << 0,
+    From = 1 << 1,
     Modify = 1 << 2,
-    All = ToDto | FromDto | Modify
+    All = To | From | Modify
 }

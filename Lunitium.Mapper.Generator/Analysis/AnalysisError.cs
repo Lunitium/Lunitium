@@ -27,7 +27,7 @@ public static class AnalysisError
     public static readonly DiagnosticDescriptor NullableMismatch = new(
         id: "LUNIMP003",
         title: "Nullable type mismatch",
-        messageFormat: "{0} doesn't nullable `{1}?`",
+        messageFormat: "{0} isn't nullable `{1}?`",
         category: DtoCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true
