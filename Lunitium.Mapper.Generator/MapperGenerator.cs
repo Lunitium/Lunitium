@@ -1,10 +1,10 @@
 using System.Collections.Immutable;
 using System.Text;
-using Lunitium.Mapper.Generator.Analysis;
 using Lunitium.Mapper.Generator.Enums;
 using Lunitium.Mapper.Generator.Models;
 using Lunitium.Mapper.Generator.Templates;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
@@ -37,24 +37,16 @@ public class MapperGenerator : IIncrementalGenerator
 
         var modelProps = GetProps(classSymbol);
         var dtoProps = GetProps(dtoSymbol);
-
-        var missingPropsErrors = dtoProps.Where(d => modelProps.All(m => m.Name != d.Name))
-            .Select(d => Diagnostic.Create(
-                AnalysisError.ModelDontHaveThisProp,
-                attributeData.ApplicationSyntaxReference!.GetSyntax().GetLocation(),
-                classSymbol.Name,
-                d.Name
-            ));
+        var props = MapperProperty.Mapping(context, modelProps, dtoProps);
 
         return new MapperToRegister
         {
             Namespace = classSymbol.ContainingNamespace.ToDisplayString(),
+            AttributeSymbol = attributeData.ApplicationSyntaxReference!.GetSyntax(),
             ModelSymbol = classSymbol,
             DtoSymbol = dtoSymbol,
-            ModelProps = modelProps,
-            DtoProps = dtoProps,
             MapDirection = mapDirectionValue is null ? MapDirection.All : (MapDirection)mapDirectionValue,
-            Errors = missingPropsErrors
+            Props = props
         };
     }
 
@@ -73,12 +65,7 @@ public class MapperGenerator : IIncrementalGenerator
     {
         foreach (var mapperToRegister in mappers)
         {
-            foreach (var diagnostic in mapperToRegister.Errors)
-            {
-                context.ReportDiagnostic(diagnostic);
-            }
-
-            var template = new MapperDtoRecordTemplate(mapperToRegister);
+            var template = new MapperDtoRecordTemplate(context, mapperToRegister);
             var result = template.Render();
             context.AddSource($"{mapperToRegister.Namespace}.{mapperToRegister.ModelSymbol.Name}.cs",
                 SourceText.From(result, Encoding.UTF8)

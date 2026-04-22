@@ -1,3 +1,6 @@
 namespace Lunitium.Mapper.Test.Dto;
 
-public record UserDto(uint Id, string Name, int Email = (int)System.DayOfWeek.Friday);
+public record UserDto(int Id, string Name, string Email = "")
+{
+    public DateTimeOffset CreatedAt { get; set; }
+}

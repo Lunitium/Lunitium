@@ -1,11 +1,14 @@
 using System.Text;
+using Lunitium.Mapper.Generator.Analysis;
+using Lunitium.Mapper.Generator.Enums;
 using Lunitium.Mapper.Generator.Models;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Lunitium.Mapper.Generator.Templates;
 
-public class MapperDtoRecordTemplate(MapperToRegister mapper)
+public class MapperDtoRecordTemplate(SourceProductionContext context, MapperToRegister mapper)
 {
     public string Render()
     {
@@ -17,7 +20,12 @@ public class MapperDtoRecordTemplate(MapperToRegister mapper)
         sb.AppendLine();
         sb.AppendLine($"public partial class {mapper.ModelSymbol.Name}");
         sb.AppendLine("{");
-        sb.AppendLine(RenderToDto());
+
+        if (mapper.MapDirection.HasFlag(MapDirection.ToDto))
+        {
+            sb.AppendLine(RenderToDto());
+        }
+
         sb.AppendLine("}");
 
         return sb.ToString();
@@ -25,58 +33,89 @@ public class MapperDtoRecordTemplate(MapperToRegister mapper)
 
     private string RenderToDto()
     {
-        var ctorProps = GetRecordConstructorProps(mapper.DtoProps);
-
         return
             $$"""
                   public {{mapper.DtoSymbol.ToDisplayString()}} ToDto()
                   {
                       return new {{mapper.DtoSymbol.ToDisplayString()}}(
-                          {{RenderCtorParameters(ctorProps, mapper.ModelProps)}}
+                          {{RenderDtoCtor()}}
                       );
                   }
               """;
     }
 
-    private static string RenderCtorParameters(List<IParameterSymbol> ctorProps, List<IPropertySymbol> props)
+    private string RenderDtoCtor()
     {
+        var ctorProps = GetConstructorProps(mapper.DtoSymbol);
         var parameters = new List<string>();
 
         foreach (var ctorProp in ctorProps)
         {
-            var symbol = props.FirstOrDefault(x =>
-                x.Name == ctorProp.Name &&
-                SymbolEqualityComparer.Default.Equals(x.Type, ctorProp.Type));
+            var prop = mapper.Props.FirstOrDefault(x => x.Key == ctorProp.Name);
+            var symbol = prop.Value.ModelProp;
 
             if (symbol != null)
             {
+                var conversion = prop.Value.ModelToDto;
+
+                if (conversion is { Exists: false })
+                {
+                    context.ReportDiagnostic(Diagnostic.Create(
+                        AnalysisError.DontMatchType,
+                        mapper.AttributeSymbol.GetLocation(),
+                        symbol.Name,
+                        ctorProp.Type.ToDisplayString()
+                    ));
+                    continue;
+                }
+
+                if (ctorProp.Type.NullableAnnotation == NullableAnnotation.NotAnnotated &&
+                    symbol.Type.NullableAnnotation == NullableAnnotation.Annotated)
+                {
+                    context.ReportDiagnostic(Diagnostic.Create(
+                        AnalysisError.NullableMismatch,
+                        mapper.AttributeSymbol.GetLocation(),
+                        symbol.Name,
+                        ctorProp.Type.ToDisplayString()
+                    ));
+                }
+
+                if (conversion is { IsExplicit: true })
+                {
+                    parameters.Add($"({ctorProp.Type.ToDisplayString()})this.{symbol.Name}");
+                    continue;
+                }
+
                 parameters.Add($"this.{symbol.Name}");
+                continue;
             }
-            
+
             if (ctorProp.HasExplicitDefaultValue)
             {
-                var parameterSyntax = ctorProp.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as ParameterSyntax;
-                
+                var parameterSyntax =
+                    ctorProp.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as ParameterSyntax;
+
                 parameters.Add($"{parameterSyntax?.Default?.Value.ToString()}");
+                continue;
             }
-            
-            continue;
+
+            context.ReportDiagnostic(Diagnostic.Create(
+                AnalysisError.ModelDontHaveThisProp,
+                mapper.AttributeSymbol.GetLocation(),
+                mapper.ModelSymbol.Name,
+                ctorProp.Name
+            ));
         }
-        
+
         return string.Join(", ", parameters);
     }
 
-    private static List<IParameterSymbol> GetRecordConstructorProps(List<IPropertySymbol> props)
+    private static List<IParameterSymbol> GetConstructorProps(INamedTypeSymbol classSymbol)
     {
-        if (props.Count == 0)
+        if (!classSymbol.IsRecord)
             return [];
 
-        var recordSymbol = props[0].ContainingType;
-
-        if (!recordSymbol.IsRecord)
-            return [];
-
-        var ctor = recordSymbol.Constructors.FirstOrDefault(x =>
+        var ctor = classSymbol.Constructors.FirstOrDefault(x =>
             x.DeclaringSyntaxReferences.Any(s => s.GetSyntax() is RecordDeclarationSyntax));
 
         return ctor == null ? [] : ctor.Parameters.ToList();
