@@ -1,7 +1,7 @@
 namespace Lunitium.Mapper.Generator.Enums;
 
 [Flags]
-public enum MapDirection : byte
+public enum MapAction : byte
 {
     To = 1 << 0,
     From = 1 << 1,

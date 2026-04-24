@@ -3,6 +3,7 @@ using System.Text;
 using Lunitium.Mapper.Generator.Enums;
 using Lunitium.Mapper.Generator.Models;
 using Lunitium.Mapper.Generator.Templates;
+using Lunitium.Mapper.Generator.Utils;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -29,29 +30,37 @@ public class MapperGenerator : IIncrementalGenerator
     private static MapperInfos ParseData(GeneratorAttributeSyntaxContext context,
         CancellationToken cancellationToken)
     {
-        var classSymbol = (INamedTypeSymbol)context.TargetSymbol;
+        var modelSymbol = (INamedTypeSymbol)context.TargetSymbol;
 
         return new MapperInfos
         {
-            Namespace = classSymbol.ContainingNamespace.ToDisplayString(),
-            ModelName = classSymbol.Name,
-            Infos = classSymbol.GetAttributes()
+            Namespace = modelSymbol.ContainingNamespace.ToDisplayString(),
+            ModelName = modelSymbol.Name,
+            Infos = modelSymbol.GetAttributes()
                 .Where(x => x.AttributeClass?.MetadataName == "MappingAttribute`1")
                 .Select(attributeData =>
                 {
-                    var mapDirectionValue = (int?)attributeData.ConstructorArguments.FirstOrDefault().Value;
-                    var dtoSymbol = (INamedTypeSymbol)attributeData.AttributeClass!.TypeArguments.First();
+                    var mapAction = attributeData.NamedArguments.FirstOrDefault(x => x.Key == "Action").Value;
+                    var mapActionValue = mapAction is { IsNull: false, Value: not null }
+                        ? (MapAction)(byte)mapAction.Value
+                        : MapAction.All;
 
-                    var modelProps = GetProps(classSymbol);
-                    var dtoProps = GetProps(dtoSymbol);
-                    var props = MapperProperty.Mapping(context, modelProps, dtoProps);
+                    var targetSymbol = (INamedTypeSymbol)attributeData.AttributeClass!.TypeArguments.First();
+
+                    var modelProps = GetProps(modelSymbol);
+                    var targetProps = GetProps(targetSymbol);
+                    var props = MapperProperty.Mapping(context, modelProps, targetProps);
 
                     return new MapperInfo()
                     {
                         AttributeSymbol = attributeData.ApplicationSyntaxReference!.GetSyntax(),
-                        ModelSymbol = classSymbol,
-                        DtoSymbol = dtoSymbol,
-                        MapDirection = mapDirectionValue is null ? MapDirection.All : (MapDirection)mapDirectionValue,
+                        ModelSymbol = modelSymbol,
+                        TargetSymbol = targetSymbol,
+                        MapAction = mapActionValue,
+                        ModelConstructorParameters =
+                            ConstructorUtils.GetBestConstructorParameters(context, modelSymbol),
+                        TargetConstructorParameters =
+                            ConstructorUtils.GetBestConstructorParameters(context, targetSymbol),
                         Props = props
                     };
                 }).ToList()

@@ -4,13 +4,13 @@ namespace Lunitium.Mapper.Generator.Analysis;
 
 public static class AnalysisError
 {
-    private const string DtoCategory = "Dto";
+    private const string MapperCategory = "Mapper";
 
     public static readonly DiagnosticDescriptor ModelDontHaveThisProp = new(
         id: "LUNIMP001",
         title: "Model don't have this property",
         messageFormat: "{0} doesn't have {1} property",
-        category: DtoCategory,
+        category: MapperCategory,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
@@ -19,7 +19,7 @@ public static class AnalysisError
         id: "LUNIMP002",
         title: "Don't match type",
         messageFormat: "{0} doesn't match type {1}",
-        category: DtoCategory,
+        category: MapperCategory,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
@@ -28,8 +28,17 @@ public static class AnalysisError
         id: "LUNIMP003",
         title: "Nullable type mismatch",
         messageFormat: "{0} isn't nullable `{1}?`",
-        category: DtoCategory,
+        category: MapperCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true
+    );
+
+    public static readonly DiagnosticDescriptor MultipleConstructors = new(
+        id: "LUNIMP004",
+        title: "Multiple constructors",
+        messageFormat: "{0} have many constructors",
+        category: MapperCategory,
+        defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
 }

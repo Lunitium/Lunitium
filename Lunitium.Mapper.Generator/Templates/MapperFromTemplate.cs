@@ -6,51 +6,50 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Lunitium.Mapper.Generator.Templates;
 
-public class MapperToTemplate(SourceProductionContext context, MapperInfo mapper)
+public class MapperFromTemplate(SourceProductionContext context, MapperInfo mapper)
 {
     public string Render()
     {
         var sb = new StringBuilder(2048);
 
-        sb.AppendLine($"    public {mapper.TargetSymbol.ToDisplayString()} To{mapper.TargetSymbol.Name}()");
+        sb.AppendLine($"    public static {mapper.ModelSymbol.Name} From{mapper.TargetSymbol.Name}({mapper.TargetSymbol.ToDisplayString()} value)");
         sb.AppendLine("    {");
-        sb.AppendLine($"        return ({mapper.TargetSymbol.ToDisplayString()})this;");
+        sb.AppendLine($"        return ({mapper.ModelSymbol.Name})value;");
         sb.AppendLine("    }");
         sb.AppendLine();
-        sb.AppendLine(
-            $"    public static implicit operator {mapper.TargetSymbol.ToDisplayString()}({mapper.ModelSymbol.Name} value)");
+        sb.AppendLine($"    public static implicit operator {mapper.ModelSymbol.Name}({mapper.TargetSymbol.ToDisplayString()} value)");
         sb.AppendLine("    {");
-        sb.AppendLine($"        return new {mapper.TargetSymbol.ToDisplayString()}(");
-        sb.AppendLine($"            {RenderTargetConstructor()}");
+        sb.AppendLine($"        return new {mapper.ModelSymbol.Name}(");
+        sb.AppendLine($"            {RenderDtoCtor()}");
         sb.AppendLine("        );");
         sb.AppendLine("    }");
 
         return sb.ToString();
     }
 
-    private string RenderTargetConstructor()
+    private string RenderDtoCtor()
     {
-        if (mapper.TargetConstructorParameters is null)
+        if (mapper.ModelConstructorParameters is null)
         {
             context.ReportDiagnostic(Diagnostic.Create(
                 AnalysisError.MultipleConstructors,
                 mapper.AttributeSymbol.GetLocation(),
-                mapper.TargetSymbol.Name
+                mapper.ModelSymbol.Name
             ));
             return string.Empty;
         }
 
         var parameters = new List<string>();
 
-        foreach (var ctorProp in mapper.TargetConstructorParameters)
+        foreach (var ctorProp in mapper.ModelConstructorParameters)
         {
             var prop = mapper.Props.FirstOrDefault(x =>
                 x.Key.Equals(ctorProp.Name, StringComparison.OrdinalIgnoreCase));
-            var symbol = prop.Value.ModelProp;
+            var symbol = prop.Value.TargetProp;
 
             if (symbol != null)
             {
-                var conversion = prop.Value.ModelToTarget;
+                var conversion = prop.Value.TargetToModel;
 
                 if (conversion is { Exists: false })
                 {
@@ -96,7 +95,7 @@ public class MapperToTemplate(SourceProductionContext context, MapperInfo mapper
             context.ReportDiagnostic(Diagnostic.Create(
                 AnalysisError.ModelDontHaveThisProp,
                 mapper.AttributeSymbol.GetLocation(),
-                mapper.ModelSymbol.Name,
+                mapper.TargetSymbol.Name,
                 ctorProp.Name
             ));
         }

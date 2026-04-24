@@ -9,9 +9,13 @@ public class MapperInfo
 
     public INamedTypeSymbol ModelSymbol { get; set; } = null!;
 
-    public INamedTypeSymbol DtoSymbol { get; set; } = null!;
+    public INamedTypeSymbol TargetSymbol { get; set; } = null!;
 
     public IDictionary<string, MapperProperty> Props { get; set; } = null!;
+    
+    public List<IParameterSymbol>? ModelConstructorParameters { get; set; }
+    
+    public List<IParameterSymbol>? TargetConstructorParameters { get; set; }
 
-    public MapDirection MapDirection { get; set; }
+    public MapAction MapAction { get; set; }
 }
