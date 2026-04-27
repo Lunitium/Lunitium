@@ -41,4 +41,13 @@ public static class AnalysisError
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
+
+    public static readonly DiagnosticDescriptor RequiredProperty = new(
+        id: "LUNIMP005",
+        title: "Required property",
+        messageFormat: "{0} is a required property",
+        category: MapperCategory,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
 }

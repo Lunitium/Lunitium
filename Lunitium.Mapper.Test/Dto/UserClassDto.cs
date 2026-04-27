@@ -1,22 +1,8 @@
-using Lunitium.Mapper.Attributes;
-
 namespace Lunitium.Mapper.Test.Dto;
 
-public class UserClassDto
+public class UserClassDto(int id, string? name, string email = "")
 {
-    [MapperConstructor]
-    public UserClassDto(int id, string name, string email = "")
-    {
-        Id = id;
-        Name = name;
-        Email = email;
-    }
-
-    public UserClassDto()
-    {
-    }
-
-    public int Id { get; }
-    public string Name { get; }
-    public string Email { get; }
+    public int Id { get; } = id;
+    public string Name { get; } = name ?? string.Empty;
+    public string Email { get; } = email;
 }

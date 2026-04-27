@@ -31,10 +31,10 @@ public class MapperProperty
             .Distinct()
             .ToDictionary(x => x, x =>
             {
-                var modelProp = modelProps.FirstOrDefault(p => p.Name == x);
-                var dtoProp = targetProps.FirstOrDefault(p => p.Name == x);
+                var modelProp = modelProps.FirstOrDefault(p => p.Name.Equals(x, StringComparison.OrdinalIgnoreCase));
+                var targetProp = targetProps.FirstOrDefault(p => p.Name.Equals(x, StringComparison.OrdinalIgnoreCase));
 
-                return new MapperProperty(context, modelProp, dtoProp);
+                return new MapperProperty(context, modelProp, targetProp);
             });
     }
 }
